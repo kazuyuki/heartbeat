@@ -33,6 +33,6 @@ int main()
 	while (1) {
 		printf("send data to server: %d\n", idx++);
 		sendto(sock, &idx, sizeof(short), 0, (struct sockaddr *) &server_addr, sizeof(struct sockaddr));
-		usleep(10000);
+		usleep(10*1000); // 10ms
 	}
 }

@@ -13,9 +13,11 @@
 int main()
 {
 	int sock = 0;
-	socklen_t addr_len = sizeof(struct sockaddr);
 	ssize_t bytes_read;
 	struct sockaddr_in server_addr, client_addr;
+	socklen_t addr_len = sizeof(struct sockaddr_in);
+	fd_set fds, readfds;
+	struct timeval tv;
 	unsigned short int idx = 0;
 
 	if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
@@ -33,14 +35,29 @@ int main()
 		exit(1);
 	}
 
+	FD_ZERO(&readfds);
+	FD_SET(sock, &readfds);
+
 	printf("\n Waiting for client on port 5000\n");
 	while (1) {
-		bytes_read = recvfrom(sock, &idx, sizeof(unsigned short), 0, (struct sockaddr *) &client_addr, &addr_len);
-		if (bytes_read == -1) {
-			perror("recvfrom");
+		tv.tv_sec = 0;
+		tv.tv_usec = 100 * 1000; // 100ms
+		memcpy(&fds, &readfds, sizeof(fd_set));
+		if ( 0 > select(sock + 1, &fds, NULL, NULL, &tv)) {
+			perror("select");
 			exit(1);
 		}
-		printf("receive %d bytes data from client: %d\n", bytes_read, idx);
+		if (FD_ISSET(sock, &fds)) {
+			bytes_read = recvfrom(sock, &idx, sizeof(unsigned short), 0, (struct sockaddr *) &client_addr, &addr_len);
+			if (bytes_read == -1) {
+				perror("recvfrom");
+				exit(1);
+			}
+			printf("receive %d bytes data from client: %d\n", bytes_read, idx);
+		} else {
+			printf("#### TIMEOUT ####\n");
+		}
 	}
+	close(sock);
 	return 0;
 }
